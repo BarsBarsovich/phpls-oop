@@ -7,7 +7,7 @@ trait Gps
 
 trait AdditionalDriver
 {
-    protected  $driverCost = 100;
+    protected $driverCost = 100;
 }
 
 interface iTariff
@@ -26,22 +26,24 @@ class BaseTariff extends Tariff
 {
     protected $costPerKilometer = 10;
     protected $costPerMinute = 3;
-    private $useTrait;
+    private $useGps;
     use Gps;
 
-    public function __construct($useTrait)
+    public function __construct($useGps)
     {
-        $this->useTrait = $useTrait;
+        $this->useGps = $useGps;
     }
 
     public function calc(int $kilos, int $minutes, int $age)
     {
-        $cost = 1;
-        if ($this->useTrait) {
-            $cost = $this->gpsCost;
+        $gpsCostPerKilometer = 1;
+        $gpsCostPerHour = 1;
+        if ($this->useGps) {
+            $gpsCostPerKilometer = $this->gpsCost * $this->costPerKilometer * $kilos;
+            $gpsCostPerHour = $this->gpsCost * $this->costPerMinute * $minutes;
         }
-        echo 'Per kilometer' . $cost + $this->costPerKilometer * $kilos * getAgeRange($age) ? 0.1 : 1;
-        echo 'Per Hour' . $cost + $this->costPerHour * $kilos * 0.1 * getAgeRange($age) ? 0.1 : 1;
+        echo 'Per kilometer' . $gpsCostPerKilometer + $this->costPerKilometer * $kilos * getAgeRange($age) ? 0.1 : 1;
+        echo 'Per Hour' . $gpsCostPerHour + $this->costPerHour * $kilos * 0.1 * getAgeRange($age) ? 0.1 : 1;
     }
 }
 
@@ -52,23 +54,34 @@ class HourTariff extends Tariff
     use Gps;
     use AdditionalDriver;
 
-    private $trait;
+    private $useGps;
+    private $useDriver;
 
-    public function __construct($isNeedTrait)
+    public function __construct($useGps, $useDriver)
     {
-        $this->trait = $isNeedTrait;
+        $this->useGps = $useGps;
+        $this->useDriver = $useDriver;
     }
 
     public function calc(int $kilos = 0, int $minutes, int $age)
     {
-        $cost = 0;
+        $gpsCostPerKilometer = 0;
+        $gpsCostPerHour = 0;
+        $driverCostPerKilometer = 0;
+        $driverCostPerHour = 0;
 
-        if ($this->trait) {
-            $cost = $this->gpsCost;
-            $cost = $cost + $this->driverCost;
+        if ($this->useGps) {
+            $gpsCostPerKilometer = $this->gpsCost * $this->costPerKilometer * $kilos;
+            $gpsCostPerHour = $this->gpsCost * $this->costPerHour * $minutes;
         }
-        echo 'Per kilometer' . $cost + $this->costPerKilometer * $kilos * getAgeRange($age) ? 0.1 : 1;
-        echo 'Per Hour' . $cost + $this->costPerHour * $kilos * getAgeRange($age) ? 0.1 : 1;
+
+        if ($this->useDriver) {
+            $driverCostPerKilometer = $this->driverCost * $this->costPerKilometer;
+            $driverCostPerHour = $this->driverCost * $this->costPerHour;
+        }
+
+        echo 'Per kilometer' . $gpsCostPerKilometer + $driverCostPerKilometer + $this->costPerKilometer * $kilos * getAgeRange($age) ? 0.1 : 1;
+        echo 'Per Hour' . $gpsCostPerHour + $driverCostPerHour + $this->costPerHour * $kilos * getAgeRange($age) ? 0.1 : 1;
 
     }
 }
@@ -77,28 +90,38 @@ class DayTariff extends Tariff
 {
     protected $costPerKilometer = 1;
     private $costPerHour = 1000;
-    private $trait;
+    private $useGps;
+    private $useAdditionalDriver;
     use Gps;
     use AdditionalDriver;
 
-    public function __construct($isNeedTrait)
+    public function __construct($useGps, $useAdditionalDriver)
     {
-        $this->trait = $isNeedTrait;
+        $this->useGps = $useGps;
+        $this->useAdditionalDriver = $useAdditionalDriver;
     }
 
 
     public function calc(int $kilos = 0, int $minutes, int $age)
     {
 
-        $cost = 0;
-        if ($this->trait) {
-            $cost = $this->gpsCost;
-            $cost = $cost + $this->driverCost;
+        $gpsCostPerKilometer = 0;
+        $gpsCostPerMinute = 0;
+        if ($this->useGps) {
+            $gpsCostPerKilometer = $this->gpsCost * $this->costPerKilometer * $kilos;
+            $gpsCostPerMinute = $this->gpsCost * $this->costPerHour * $minutes;
         }
-        echo 'Per kilometer' . $cost + $this->costPerKilometer * $kilos * getAgeRange($age) ? 0.1 : 1;
-        echo 'Per Hour' . $cost + $this->costPerHour * $kilos * getAgeRange($age) ? 0.1 : 1;
-        return;
 
+        $driverCostPerKilometer = 0;
+        $driverCostPerMinute = 0;
+        if ($this->useAdditionalDriver) {
+            $driverCostPerKilometer = $this->driverCost * $this->costPerKilometer * $kilos;
+            $driverCostPerMinute = $this->driverCost * $this->costPerMinute * $minutes;
+
+        }
+
+        echo 'Per kilometer' . $gpsCostPerKilometer + $driverCostPerKilometer + $this->costPerKilometer * $kilos * getAgeRange($age) ? 0.1 : 1;
+        echo 'Per Hour' . $gpsCostPerMinute + $driverCostPerMinute + $this->costPerHour * $kilos * getAgeRange($age) ? 0.1 : 1;
     }
 }
 
@@ -109,9 +132,9 @@ class StudentTariff extends Tariff
     private $useTrait;
     use Gps;
 
-    public function __construct($needTrait)
+    public function __construct($useGps)
     {
-        $this->useTrait = $needTrait;
+        $this->useTrait = $useGps;
     }
 
     public function calc(int $kilos = 0, int $minutes, int $age)
@@ -124,12 +147,13 @@ class StudentTariff extends Tariff
         if ($this->trait) {
             $cost = $this->gpsCost;
         }
-        echo 'Per kilometer' . $cost + $this->costPerKilometer * $kilos * getAgeRange($age) ? 0.1 : 1;;
-        echo 'Per Hour' . $cost + $this->costPerHour * $kilos * getAgeRange($age) ? 0.1 : 1;
+        echo 'Per kilometer' . ($cost * $this->costPerKilometer) + $this->costPerKilometer * $kilos * getAgeRange($age) ? 0.1 : 1;;
+        echo 'Per Hour' . ($cost * $this->costPerKilometer) + $this->costPerHour * $kilos * getAgeRange($age) ? 0.1 : 1;
     }
 }
 
-function getAgeRange(int $age){
+function getAgeRange(int $age)
+{
     return $age > 18 && $age < 21;
 }
 
