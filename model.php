@@ -3,6 +3,11 @@
 trait Gps
 {
     protected $gpsCost = 15;
+
+    public function calcGps(int $hour)
+    {
+        return $this->gpsCost * $hour;
+    }
 }
 
 trait AdditionalDriver
@@ -20,6 +25,20 @@ abstract class Tariff implements iTariff
     protected $costPerMinute;
     protected $costPerKilometer;
 
+    public function calc(int $kilos, int $minutes, int $age)
+    {
+        $result = (($this->costPerKilometer * $kilos) + ($this->costPerMinute * $minutes)) * $this->getAgeCoeff($age);
+        return $result;
+    }
+
+    private function getAgeCoeff(int $age)
+    {
+        if ($age > 18 && $age < 21) {
+            return 0.1;
+        }
+        return 1;
+    }
+
 }
 
 class BaseTariff extends Tariff
@@ -29,131 +48,122 @@ class BaseTariff extends Tariff
     private $useGps;
     use Gps;
 
-    public function __construct($useGps)
+    public function __construct($useGps = false)
     {
         $this->useGps = $useGps;
     }
 
     public function calc(int $kilos, int $minutes, int $age)
     {
-        $gpsCostPerKilometer = 1;
-        $gpsCostPerHour = 1;
+        $hours = $minutes / 60;
+        $gpsCost = 0;
         if ($this->useGps) {
-            $gpsCostPerKilometer = $this->gpsCost * $this->costPerKilometer * $kilos;
-            $gpsCostPerHour = $this->gpsCost * $this->costPerMinute * $minutes;
+            $gpsCost = $this->calcGps($hours);
         }
-        echo 'Per kilometer' . $gpsCostPerKilometer + $this->costPerKilometer * $kilos * getAgeRange($age) ? 0.1 : 1;
-        echo 'Per Hour' . $gpsCostPerHour + $this->costPerHour * $kilos * 0.1 * getAgeRange($age) ? 0.1 : 1;
+        $totalCost = parent::calc($kilos, $minutes, $age) + $gpsCost;
+        echo $totalCost;
     }
 }
 
 class HourTariff extends Tariff
 {
     protected $costPerKilometer = 0;
-    private $costPerHour = 200;
+    protected $costPerMinute = 200;
     use Gps;
     use AdditionalDriver;
 
     private $useGps;
     private $useDriver;
 
-    public function __construct($useGps, $useDriver)
+    public function __construct($useGps = false, $useDriver = false)
     {
         $this->useGps = $useGps;
         $this->useDriver = $useDriver;
     }
 
-    public function calc(int $kilos = 0, int $minutes, int $age)
+    public function calc(int $kilos, int $minutes, int $age)
     {
-        $gpsCostPerKilometer = 0;
-        $gpsCostPerHour = 0;
-        $driverCostPerKilometer = 0;
-        $driverCostPerHour = 0;
+        $hour = ceil($minutes / 60);
+        $convertedMinutes = $hour * 60;
 
+        $gpsCost = 0;
         if ($this->useGps) {
-            $gpsCostPerKilometer = $this->gpsCost * $this->costPerKilometer * $kilos;
-            $gpsCostPerHour = $this->gpsCost * $this->costPerHour * $minutes;
+            $gpsCost = $this->calcGps($hour);
         }
 
+        $driverCost = 0;
         if ($this->useDriver) {
-            $driverCostPerKilometer = $this->driverCost * $this->costPerKilometer;
-            $driverCostPerHour = $this->driverCost * $this->costPerHour;
+            $driverCost = $this->driverCost;
         }
 
-        echo 'Per kilometer' . $gpsCostPerKilometer + $driverCostPerKilometer + $this->costPerKilometer * $kilos * getAgeRange($age) ? 0.1 : 1;
-        echo 'Per Hour' . $gpsCostPerHour + $driverCostPerHour + $this->costPerHour * $kilos * getAgeRange($age) ? 0.1 : 1;
-
+        $totalCost = parent::calc($kilos, $convertedMinutes, $age) + $gpsCost + $driverCost;
+        echo $totalCost;
     }
 }
 
 class DayTariff extends Tariff
 {
     protected $costPerKilometer = 1;
-    private $costPerHour = 1000;
+    protected $costPerMinute = 1000;
     private $useGps;
     private $useAdditionalDriver;
     use Gps;
     use AdditionalDriver;
 
-    public function __construct($useGps, $useAdditionalDriver)
+    public function __construct($useGps = false, $useAdditionalDriver = false)
     {
         $this->useGps = $useGps;
         $this->useAdditionalDriver = $useAdditionalDriver;
     }
 
 
-    public function calc(int $kilos = 0, int $minutes, int $age)
+    public function calc(int $kilos, int $minutes, int $age)
     {
 
-        $gpsCostPerKilometer = 0;
-        $gpsCostPerMinute = 0;
+        $days = ceil($minutes / 1440);
+        $convertedMinutes = $days * 1440;
+
+        $gpsCost = 0;
+
         if ($this->useGps) {
-            $gpsCostPerKilometer = $this->gpsCost * $this->costPerKilometer * $kilos;
-            $gpsCostPerMinute = $this->gpsCost * $this->costPerHour * $minutes;
+            $this->calcGps($days / 24);
         }
 
-        $driverCostPerKilometer = 0;
-        $driverCostPerMinute = 0;
+        $driverCost = 0;
+
         if ($this->useAdditionalDriver) {
-            $driverCostPerKilometer = $this->driverCost * $this->costPerKilometer * $kilos;
-            $driverCostPerMinute = $this->driverCost * $this->costPerMinute * $minutes;
-
+            $driverCost = $this->driverCost;
         }
 
-        echo 'Per kilometer' . $gpsCostPerKilometer + $driverCostPerKilometer + $this->costPerKilometer * $kilos * getAgeRange($age) ? 0.1 : 1;
-        echo 'Per Hour' . $gpsCostPerMinute + $driverCostPerMinute + $this->costPerHour * $kilos * getAgeRange($age) ? 0.1 : 1;
+        $totalCost = parent::calc($kilos, $convertedMinutes, $age) + $driverCost + $gpsCost;
+        echo $totalCost;
     }
 }
 
 class StudentTariff extends Tariff
 {
     protected $costPerKilometer = 4;
-    private $costPerHour = 1;
+    protected $costPerMinute = 1;
     private $useTrait;
     use Gps;
 
-    public function __construct($useGps)
+    public function __construct($useGps = false)
     {
         $this->useTrait = $useGps;
     }
 
-    public function calc(int $kilos = 0, int $minutes, int $age)
+    public function calc(int $kilos, int $minutes, int $age)
     {
         if ($age > 25) {
             die('Неправильный возраст');
         }
 
         $cost = 0;
-        if ($this->trait) {
-            $cost = $this->gpsCost;
+        if ($this->useTrait) {
+            $cost = $this->calcGps($minutes);
         }
-        echo 'Per kilometer' . ($cost * $this->costPerKilometer) + $this->costPerKilometer * $kilos * getAgeRange($age) ? 0.1 : 1;;
-        echo 'Per Hour' . ($cost * $this->costPerKilometer) + $this->costPerHour * $kilos * getAgeRange($age) ? 0.1 : 1;
+
+        $cost = $cost + parent::calc($kilos, $minutes, $age);
+        echo $cost;
     }
 }
-
-function getAgeRange(int $age)
-{
-    return $age > 18 && $age < 21;
-}
-
