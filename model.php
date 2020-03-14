@@ -34,7 +34,7 @@ abstract class Tariff implements iTariff
     private function getAgeCoeff(int $age)
     {
         if ($age > 18 && $age < 21) {
-            return 0.1;
+            return 1.1;
         }
         return 1;
     }
